@@ -1,120 +1,145 @@
 import sys
-from heapq import heappush, heappop
+import heapq
 
 def solve():
     data = sys.stdin.read().strip().split()
-    # data pointer
     idx = 0
-    
-    # 1) Parse N, M
+
     N = int(data[idx]); idx += 1
     M = int(data[idx]); idx += 1
-    
-    # 2) Read the "shark strength" grid (N lines, each M entries)
-    shark_strength = [[0]*M for _ in range(N)]
-    s_r = s_c = -1
-    d_r = d_c = -1
-    
-    for r in range(N):
-        for c in range(M):
-            val = data[idx]
+
+    # Read the shark grid
+    shark_grid = [[0]*M for _ in range(N)]
+    source = None
+    destination = None
+
+    for i in range(N):
+        for j in range(M):
+            token = data[idx]
             idx += 1
-            if val == 'S':
-                s_r, s_c = r, c
-                shark_strength[r][c] = 0   # treat 'S' as 0
-            elif val == 'D':
-                d_r, d_c = r, c
-                shark_strength[r][c] = 0   # treat 'D' as 0
+            if token == 'S':
+                source = (i, j)
+                shark_grid[i][j] = 0
+            elif token == 'D':
+                destination = (i, j)
+                shark_grid[i][j] = 0
             else:
-                # integer
-                shark_strength[r][c] = int(val)
-    
-    # 3) Read the time matrix (N lines, each M integers)
-    time_cost = [[0]*M for _ in range(N)]
-    for r in range(N):
-        for c in range(M):
-            time_cost[r][c] = int(data[idx])
+                shark_grid[i][j] = int(token)
+
+    # Read the time grid
+    time_grid = [[0]*M for _ in range(N)]
+    for i in range(N):
+        for j in range(M):
+            time_grid[i][j] = int(data[idx])
             idx += 1
-            
-    # 4) Read K
+
+    # Initial strength
     K = int(data[idx])
     idx += 1
-    
-    # Basic checks
-    if s_r < 0 or d_r < 0:
+
+    if source is None or destination is None:
         print("Not Possible")
         return
-    
-    # Edge case: if source == destination
-    if s_r == d_r and s_c == d_c:
-        # Then the time = time_cost[s_r][s_c], finalStrength=K (no steps?).
-        # Usually you wouldn't do any moves, so steps=0, sumSharks=0 -> finalStrength=K
-        print(time_cost[s_r][s_c], K)
-        return
 
-    # Directions for adjacency (up/down/left/right)
-    directions = [(-1,0), (1,0), (0,-1), (0,1)]
-    
-    # We will run a Dijkstra on (timeSoFar, r, c, sumSharkSoFar, stepsSoFar).
-    # Priority queue (min-heap) keyed on timeSoFar.
+    sx, sy = source
+    dx, dy = destination
+
+    # Each cell (r,c) will store a small list of (time, leftover) states
+    # that are "non-dominated."
+    labels = [[[] for _ in range(M)] for _ in range(N)]
+
+    # We'll push (time, r, c, leftover) into a min-heap, keyed by time
     pq = []
-    # Start from (s_r, s_c).  sumSharks = 0, steps = 0, time = time_cost[s_r][s_c].
-    start_time = time_cost[s_r][s_c]
-    heappush(pq, (start_time, s_r, s_c, 0, 0))  # (time, r, c, sumSharks, steps)
-    
-    # visited[r][c][strengthCost] = minimal time we found with that strengthCost
-    # but strengthCost can go up to K, which could be large. 
-    # For safety in CodeVita constraints (N, M typically up to 10 or 20), we can do a dictionary.
-    visited = {}
-    # store visited[(r,c, sumSharks, steps)] = best_time
-    visited[(s_r, s_c, 0, 0)] = start_time
-    
-    answer_time = None
-    answer_strength = None
-    
+
+    # Insert the starting position: time=0, leftover=K
+    labels[sx][sy].append((0, K))
+    heapq.heappush(pq, (0, sx, sy, K))
+
+    def is_dominated(r, c, newT, newS):
+        """
+        Returns True if (newT, newS) is dominated by an existing (t, s) in labels[r][c].
+        We say (t, s) dominates (newT, newS) if t <= newT and s >= newS (with at least one strict).
+        """
+        for (t, s) in labels[r][c]:
+            if t <= newT and s >= newS:
+                return True
+        return False
+
+    def remove_dominated(r, c, newT, newS):
+        """
+        Remove any (t, s) in labels[r][c] that is dominated by (newT, newS).
+        i.e. if newT <= t and newS >= s.
+        """
+        non_dom = []
+        for (t, s) in labels[r][c]:
+            # Keep (t, s) if it isn't dominated by (newT, newS).
+            if not (newT <= t and newS >= s):
+                non_dom.append((t, s))
+        labels[r][c] = non_dom
+
+    directions = [(1,0), (-1,0), (0,1), (0,-1)]
+
+    INF = float('inf')
+
+    best_time = INF
+    best_strength = -1
+
     while pq:
-        curr_time, r, c, sum_sharks, steps = heappop(pq)
-        
-        # If this state is stale compared to visited, skip
-        if visited.get((r, c, sum_sharks, steps), 10**15) < curr_time:
-            continue
-        
-        # Check if we've reached D
-        if r == d_r and c == d_c:
-            # This is the minimal time to get here. Compute final strength:
-            final_strength = K - (sum_sharks + steps)
-            answer_time = curr_time
-            answer_strength = final_strength
+        curr_time, r, c, s = heapq.heappop(pq)
+
+        # If we've already found a time better than curr_time to get to D, we can break early.
+        # But to ensure we catch a tie in time with better leftover, we can't break at first arrival
+        # unless we check the leftover tie carefully. We'll keep it simple: keep going,
+        # we only stop if curr_time > best_time.
+        if curr_time > best_time:
             break
-        
-        # Expand neighbors
+
+        # If this label doesn't exist in labels[r][c] anymore, it's outdated
+        # (meaning it got dominated or replaced). Skip it.
+        # (We check if (curr_time, s) is still in the labels list. 
+        #  If not, that means it was pruned.)
+        if (curr_time, s) not in labels[r][c]:
+            continue
+
+        # If we've reached destination, possibly update best_time/strength
+        if (r, c) == (dx, dy):
+            # We have a new or equal minimal time solution
+            if curr_time < best_time:
+                best_time = curr_time
+                best_strength = s
+            elif curr_time == best_time and s > best_strength:
+                best_strength = s
+            # We don't break because we might find an equal time with higher leftover
+            continue
+
         for dr, dc in directions:
             nr, nc = r + dr, c + dc
             if 0 <= nr < N and 0 <= nc < M:
-                # Next cell's cost in sharks
-                new_sum_sharks = sum_sharks + shark_strength[nr][nc]
-                new_steps = steps + 1
-                # Check if strength is still >= 0
-                if new_sum_sharks + new_steps <= K:
-                    new_time = curr_time + time_cost[nr][nc]
-                    # Check if we have visited
-                    if (nr, nc, new_sum_sharks, new_steps) not in visited or \
-                       visited[(nr, nc, new_sum_sharks, new_steps)] > new_time:
-                        visited[(nr, nc, new_sum_sharks, new_steps)] = new_time
-                        heappush(pq, (new_time, nr, nc, new_sum_sharks, new_steps))
-    
-    if answer_time is None:
+                cost_in_strength = 1 + shark_grid[nr][nc]  # 0 if it's S or D
+                newS = s - cost_in_strength
+                if newS < 0:
+                    continue
+
+                newT = curr_time + time_grid[nr][nc]
+
+                # If newT already exceeds best_time found at D, no need to proceed
+                if newT > best_time:
+                    continue
+
+                # Check if (newT, newS) is dominated by any existing label at (nr, nc).
+                if is_dominated(nr, nc, newT, newS):
+                    continue
+
+                # If not dominated, remove those it dominates, then add & push
+                remove_dominated(nr, nc, newT, newS)
+                labels[nr][nc].append((newT, newS))
+                heapq.heappush(pq, (newT, nr, nc, newS))
+
+    # After the loop, check if we found a feasible solution
+    if best_time == INF:
         print("Not Possible")
     else:
-        # We have found a path
-        if answer_strength < 0:
-            # theoretically shouldn't happen because we checked while expanding
-            print("Not Possible")
-        else:
-            print(answer_time, answer_strength)
+        print(best_time, best_strength)
 
-
-# For CodeVita-style: Usually we just define solve() and read from stdin.
-# If you want to test locally with some sample input, you can do so like:
 if __name__ == "__main__":
     solve()
