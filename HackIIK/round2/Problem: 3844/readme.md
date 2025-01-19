@@ -1,4 +1,3 @@
-```markdown
 # SQL Injection Analysis - SOC Engineer Task
 
 ## Problem Statement
@@ -98,5 +97,4 @@ INPUT            EXPECTED OUTPUT                                                
                  4A:-/dvwa/vulnerabilities/sqli/?id=2'+union+select+group_concat(user_id,0x3a,user,0x3a,password),2+from+users--+&Submit=Submit-;
                  5A:-2-;                                                                                                         4A:-/dvwa/vulnerabilities/sqli/?id=2'+union+select+group_concat(user_id,0x3a,user,0x3a,password),2+from+users--+&Submit=Submit-;
                                                                                                                                 5A:-2-;
-```
 ```
