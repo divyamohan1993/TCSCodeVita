@@ -2,7 +2,7 @@
 
 This repository contains solutions to advanced competitive programming problems that I tackled in **TCS CodeVita Season 12** and **HackIITK Hackathon**, where I achieved:
 
-- **Global Rank 5** in TCS CodeVita Season 12 (2025).
+- **Global Rank 5** (All India Rank 1) in TCS CodeVita Season 12 (2025).
 - Successful completion of challenging problems at HackIITK.
 
 ---
