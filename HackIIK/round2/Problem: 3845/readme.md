@@ -1,4 +1,3 @@
-```markdown
 # Merkle Root Calculation
 
 ## Problem Statement
@@ -69,4 +68,3 @@ aa17c79e02cbd20473e0e26e1cd110242a29d8e4a43d1c6b07a6b2037566aa54
 | 2         | 3            | `1ca2374bfe088e2653104271975d0e5b4c4571ea82f44eb91dcb996d4c9d3eab` | `1ca2374bfe088e2653104271975d0e5b4c4571ea82f44eb91dcb996d4c9d3eab` |
 
 --- 
-```
