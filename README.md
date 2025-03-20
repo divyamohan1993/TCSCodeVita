@@ -34,6 +34,6 @@ The contents of this repository are for educational purposes only. Please do not
 
 ## 🌐 Connect with Me
 
-- **Email**: [your-email@example.com](mailto:contact@dmj.one)  
+- **Email**: [contact@dmj.one](mailto:contact@dmj.one)  
 - **LinkedIn**: [Divya Mohan](https://linkedin.com/in/divyamohan1993)  
 - **Website**: [dmj.one](https://dmj.one)
